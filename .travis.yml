@@ -1,5 +1,9 @@
 language: java
 jdk:
   - openjdk8
+before_install:
+  - echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNAME" --password-stdin
+  - docker pull openjdk:8-jre-alpine
 script:
-  - ./mvnw clean install -s .mvn/wrapper/settings.xml
+  - ./mvnw -s .mvn/wrapper/settings.xml clean install
+  - ./mvnw -s .mvn/wrapper/settings.xml deploy jib:build -P deploy-docker
