@@ -1,7 +1,10 @@
 package com.fclerget.mindmap.service;
 
 import com.fclerget.mindmap.model.Leaf;
+import com.fclerget.mindmap.model.MindMap;
+import com.fclerget.mindmap.repository.LeafRepository;
 import com.fclerget.mindmap.repository.MindMapRepository;
+import org.assertj.core.util.Lists;
 import org.hamcrest.MatcherAssert;
 import org.hamcrest.Matchers;
 import org.junit.jupiter.api.BeforeEach;
@@ -9,6 +12,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
@@ -19,136 +23,82 @@ class MindMapServiceTest {
     private MindMapRepository mindMapRepository;
 
     @Autowired
+    private LeafRepository leafRepository;
+
+    @Autowired
     private MindMapService mindMapService;
 
     @BeforeEach
     public void setup() {
-        Leaf leafToGet = new Leaf();
-        leafToGet.setPath("test/leafToGet");
-        leafToGet.setText("text");
-        mindMapRepository.save(leafToGet);
-        Leaf leafToDelete = new Leaf();
-        leafToDelete.setPath("test/leafToDelete");
-        leafToDelete.setText("text");
-        mindMapRepository.save(leafToDelete);
-        Leaf existingLeaf = new Leaf();
-        existingLeaf.setPath("test/existingLeaf");
-        existingLeaf.setText("text");
-        mindMapRepository.save(existingLeaf);
-        Leaf partialLeaf1 = new Leaf();
-        partialLeaf1.setPath("partial/leaf1");
-        partialLeaf1.setText("text");
-        mindMapRepository.save(partialLeaf1);
-        Leaf partialLeaf2 = new Leaf();
-        partialLeaf2.setPath("partial/leaf2");
-        partialLeaf2.setText("text");
-        mindMapRepository.save(partialLeaf2);
+
+        mindMapRepository.deleteAll();
+        leafRepository.deleteAll();
+
+        MindMap mindMap = new MindMap();
+        mindMap.setId("mindmap");
+        mindMapRepository.save(mindMap);
+
+        Leaf leaf1 = new Leaf();
+        leaf1.setPath("leaf1");
+        leaf1.setText("text");
+        leaf1.setMindMap(mindMap);
+        leafRepository.save(leaf1);
+
+        Leaf leaf2 = new Leaf();
+        leaf2.setPath("leaf2");
+        leaf2.setText("text");
+        leaf2.setMindMap(mindMap);
+        leafRepository.save(leaf2);
     }
 
     @Test
-    public void putLeafNewLeaf() {
-        Leaf leaf = new Leaf();
-        leaf.setPath("test/newleaf");
-        leaf.setText("text");
-        Leaf savedLeaf = mindMapService.putLeaf(leaf);
+    void create() {
 
-        MatcherAssert.assertThat(savedLeaf, Matchers.is(leaf));
-    }
+        MindMap newMindMap = new MindMap();
+        newMindMap.setId("newMindMap");
 
-    @Test
-    public void putLeafExistingLeaf() {
-        Leaf leaf = new Leaf();
-        leaf.setPath("test/existingLeaf");
-        leaf.setText("newtext");
-        Leaf savedLeaf = mindMapService.putLeaf(leaf);
+        mindMapService.create(newMindMap);
 
-        MatcherAssert.assertThat(savedLeaf, Matchers.is(leaf));
-    }
-
-    @Test
-    public void getLeaf() {
-        Optional<Leaf> leafOptional = mindMapService.getLeaf("test/leafToGet");
-
-        MatcherAssert.assertThat(leafOptional.isPresent(), Matchers.is(true));
-        MatcherAssert.assertThat(leafOptional.get().getPath(), Matchers.is("test/leafToGet"));
-    }
-
-
-    @Test
-    public void deleteValidLeaf() {
-
-        boolean exists = mindMapRepository.existsById("test/leafToDelete");
-
-        MatcherAssert.assertThat(exists, Matchers.is(true));
-
-        mindMapService.deleteLeaf("test/leafToDelete");
-
-        exists = mindMapRepository.existsById("test/leafToDelete");
-
-        MatcherAssert.assertThat(exists, Matchers.is(false));
-    }
-
-    @Test
-    public void deleteInvalidLeaf() {
-
-        boolean exists = mindMapRepository.existsById("test/invalidLeafToDelete");
-
-        MatcherAssert.assertThat(exists, Matchers.is(false));
-
-        mindMapService.deleteLeaf("test/invalidLeafToDelete");
-
-        exists = mindMapRepository.existsById("test/invalidLeafToDelete");
-
-        MatcherAssert.assertThat(exists, Matchers.is(false));
-
-    }
-
-    @Test
-    public void existLeafExceptTrue() {
-
-        boolean exists = mindMapService.exists("test/leafToGet");
+        boolean exists = mindMapRepository.existsById("newMindMap");
 
         MatcherAssert.assertThat(exists, Matchers.is(true));
     }
 
     @Test
-    public void existLeafExceptFalse() {
+    void findAll() {
 
-        boolean exists = mindMapService.exists("test/leafNotPresent");
+        List<MindMap> all = mindMapService.findAll();
+
+        MatcherAssert.assertThat(all.size(), Matchers.is(1));
+    }
+
+    @Test
+    void findById() {
+
+        Optional<MindMap> optional = mindMapService.findById("mindmap");
+
+        MatcherAssert.assertThat(optional.isPresent(), Matchers.is(true));
+    }
+
+    @Test
+    void delete() {
+
+        mindMapService.delete("mindmap");
+
+        boolean exists = mindMapRepository.existsById("mindmap");
 
         MatcherAssert.assertThat(exists, Matchers.is(false));
+
+        ArrayList<Leaf> leaves = Lists.newArrayList(leafRepository.findAll());
+
+        MatcherAssert.assertThat(leaves.size(), Matchers.is(0));
     }
 
     @Test
-    public void findNoLeaves() {
+    void exists() {
 
-        List<Leaf> leaves = mindMapService.getLeaves("test/leafNotPresent");
+        boolean exists = mindMapService.exists("mindmap");
 
-        MatcherAssert.assertThat(leaves.isEmpty(), Matchers.is(true));
+        MatcherAssert.assertThat(exists, Matchers.is(true));
     }
-
-    @Test
-    public void findOnlyOneLeaves() {
-
-        List<Leaf> leaves = mindMapService.getLeaves("test/leafToGet");
-
-        MatcherAssert.assertThat(leaves.size(), Matchers.is(1));
-    }
-
-    @Test
-    public void findAllLeavesWithPartialPath() {
-
-        List<Leaf> leaves = mindMapService.getLeaves("partial/");
-
-        MatcherAssert.assertThat(leaves.size(), Matchers.is(2));
-    }
-
-    @Test
-    public void findAllLeaves() {
-
-        List<Leaf> leaves = mindMapService.getLeaves("");
-
-        MatcherAssert.assertThat(leaves.size(), Matchers.is(5));
-    }
-
 }

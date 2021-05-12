@@ -1,15 +1,16 @@
 package com.fclerget.mindmap.controller;
 
-import com.fclerget.mindmap.model.Leaf;
+import com.fclerget.mindmap.model.MindMap;
 import com.fclerget.mindmap.service.MindMapService;
+import com.google.common.collect.Lists;
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import javax.servlet.http.HttpServletRequest;
-import java.util.Optional;
+import java.util.List;
 
 @RestController
 @RequestMapping("/api/v1/mindmap")
@@ -24,61 +25,39 @@ public class MindMapController {
 
     @PostMapping(
             consumes = MediaType.APPLICATION_JSON_VALUE,
-            produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<Leaf> createLeaf(@RequestBody Leaf leaf) {
+            produces = MediaType.APPLICATION_JSON_VALUE
+    )
+    public ResponseEntity<MindMap> create(@RequestBody MindMap mindMap) {
 
-        leaf = mindMapService.putLeaf(leaf);
+        mindMap = mindMapService.create(mindMap);
 
-        return new ResponseEntity<>(leaf, HttpStatus.CREATED);
+        return new ResponseEntity<>(mindMap, HttpStatus.CREATED);
     }
 
-    @GetMapping(value = "/**",
-            produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<Leaf> getLeaf(HttpServletRequest request) {
+    @GetMapping(
+            produces = MediaType.APPLICATION_JSON_VALUE
+    )
+    public ResponseEntity<List<MindMap>> get(@RequestParam(required = false, defaultValue = "") String id) {
 
-        String requestURL = request.getRequestURL().toString();
+        List<MindMap> mindMaps = Lists.newArrayList();
 
-        String path = extractPathFromURL(requestURL);
-
-        Optional<Leaf> leafOptional = mindMapService.getLeaf(path);
-
-        return leafOptional
-                .map(leaf -> new ResponseEntity<>(leaf, HttpStatus.OK))
-                .orElseGet(() -> new ResponseEntity<>(HttpStatus.NOT_FOUND));
-    }
-
-    @PutMapping(
-            consumes = MediaType.APPLICATION_JSON_VALUE,
-            produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<Leaf> putLeaf(@RequestBody Leaf leaf) {
-
-        if (!mindMapService.exists(leaf.getPath())) {
-            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+        if (StringUtils.isBlank(id)) {
+            mindMaps = mindMapService.findAll();
+        } else {
+            mindMapService
+                    .findById(id)
+                    .ifPresent(mindMaps::add);
         }
 
-        leaf = mindMapService.putLeaf(leaf);
-
-        return new ResponseEntity<>(leaf, HttpStatus.OK);
+        return new ResponseEntity<>(mindMaps, HttpStatus.OK);
     }
 
-    @DeleteMapping(value = "/**",
-            produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<Void> deleteLeaf(HttpServletRequest request) {
+    @DeleteMapping
+    public ResponseEntity<Void> delete(@RequestParam String id) {
 
-        String requestURL = request.getRequestURL().toString();
+        mindMapService.delete(id);
 
-        String path = extractPathFromURL(requestURL);
-
-        if (!mindMapService.exists(path)) {
-            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
-        }
-
-        mindMapService.deleteLeaf(path);
-
-        return new ResponseEntity<>(HttpStatus.NO_CONTENT);
+        return new ResponseEntity<>(HttpStatus.OK);
     }
 
-    private String extractPathFromURL(String requestURL) {
-        return requestURL.split("/mindmap/")[1];
-    }
 }

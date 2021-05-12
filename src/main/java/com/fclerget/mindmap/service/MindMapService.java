@@ -1,7 +1,9 @@
 package com.fclerget.mindmap.service;
 
-import com.fclerget.mindmap.model.Leaf;
+import com.fclerget.mindmap.model.MindMap;
 import com.fclerget.mindmap.repository.MindMapRepository;
+import com.google.common.collect.Lists;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -12,34 +14,28 @@ public class MindMapService {
 
     private final MindMapRepository mindMapRepository;
 
+    @Autowired
     public MindMapService(MindMapRepository mindMapRepository) {
         this.mindMapRepository = mindMapRepository;
     }
 
-    public List<Leaf> getLeaves(String path) {
-        return mindMapRepository.findByPathStartingWith(path);
+    public MindMap create(MindMap mindMap) {
+        return mindMapRepository.save(mindMap);
     }
 
-    public Leaf putLeaf(Leaf leaf) {
-
-        return mindMapRepository.save(leaf);
+    public List<MindMap> findAll() {
+        return Lists.newArrayList(mindMapRepository.findAll());
     }
 
-    public Optional<Leaf> getLeaf(String path) {
-
-        return mindMapRepository.findById(path);
+    public Optional<MindMap> findById(String id) {
+        return mindMapRepository.findById(id);
     }
 
-    public void deleteLeaf(String path) {
-
-        if (!exists(path)) {
-            return;
-        }
-
-        mindMapRepository.deleteById(path);
+    public void delete(String id) {
+        mindMapRepository.deleteById(id);
     }
 
-    public boolean exists(String path) {
-        return mindMapRepository.existsById(path);
+    public boolean exists(String id) {
+        return mindMapRepository.existsById(id);
     }
 }

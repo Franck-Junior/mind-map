@@ -1,7 +1,7 @@
 package com.fclerget.mindmap.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fclerget.mindmap.model.Leaf;
+import com.fclerget.mindmap.model.MindMap;
 import com.fclerget.mindmap.service.MindMapService;
 import org.hamcrest.MatcherAssert;
 import org.hamcrest.Matchers;
@@ -11,13 +11,11 @@ import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
+import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
-
-import java.util.Optional;
 
 @WebMvcTest(controllers = MindMapController.class)
 class MindMapControllerTest {
@@ -30,171 +28,78 @@ class MindMapControllerTest {
 
     @BeforeEach
     public void setup() {
-
-        Leaf validLeaf = new Leaf();
-
-        validLeaf.setPath("test/found");
-        validLeaf.setText("text");
-
-        Leaf updatedValidLeaf = new Leaf();
-
-        updatedValidLeaf.setPath("test/found");
-        updatedValidLeaf.setText("newtext");
-
-        Mockito.when(mindMapService.getLeaf("test/found")).thenReturn(Optional.of(validLeaf));
-        Mockito.when(mindMapService.exists("test/found")).thenReturn(true);
-        Mockito.when(mindMapService.exists("test/not_found")).thenReturn(false);
-        Mockito.when(mindMapService.putLeaf(validLeaf)).thenReturn(validLeaf);
-        Mockito.when(mindMapService.putLeaf(updatedValidLeaf)).thenReturn(updatedValidLeaf);
     }
 
     @Test
-    public void getLeafWithValidPath() throws Exception {
+    public void getMindMapWithoutId() throws Exception {
 
-        String baseURI = "/api/v1/mindmap";
+        MockHttpServletRequestBuilder request = MockMvcRequestBuilders
+                .get("/api/v1/mindmap")
+                .accept(MediaType.APPLICATION_JSON_VALUE);
 
-        MvcResult mvcResult = mvc.perform(MockMvcRequestBuilders.get(baseURI + "/test/found")
-                .accept(MediaType.APPLICATION_JSON_VALUE)).andReturn();
+        MvcResult mvcResult = mvc.perform(request).andReturn();
 
         int status = mvcResult.getResponse().getStatus();
 
-        MatcherAssert.assertThat(status, Matchers.is(HttpStatus.OK.value()));
+        MatcherAssert.assertThat(status, Matchers.is(200));
 
-        String content = mvcResult.getResponse().getContentAsString();
+        Mockito.verify(mindMapService, Mockito.times(1)).findAll();
+    }
+
+    @Test
+    public void getMindMapWithId() throws Exception {
+
+        MockHttpServletRequestBuilder request = MockMvcRequestBuilders
+                .get("/api/v1/mindmap")
+                .queryParam("id", "mindmap")
+                .accept(MediaType.APPLICATION_JSON_VALUE);
+
+        MvcResult mvcResult = mvc.perform(request).andReturn();
+
+        int status = mvcResult.getResponse().getStatus();
+
+        MatcherAssert.assertThat(status, Matchers.is(200));
+
+        Mockito.verify(mindMapService, Mockito.times(1)).findById("mindmap");
+    }
+
+    @Test
+    public void createMindMap() throws Exception {
+
+        MindMap mindMap = new MindMap();
+        mindMap.setId("mindmap");
 
         ObjectMapper objectMapper = new ObjectMapper();
 
-        Leaf leaf = objectMapper.readValue(content, Leaf.class);
+        MockHttpServletRequestBuilder request = MockMvcRequestBuilders
+                .post("/api/v1/mindmap")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(mindMap))
+                .accept(MediaType.APPLICATION_JSON_VALUE);
 
-        MatcherAssert.assertThat(leaf.getPath(), Matchers.is("test/found"));
-        MatcherAssert.assertThat(leaf.getText(), Matchers.is("text"));
-    }
-
-    @Test
-    public void getLeafWithInvalidPath() throws Exception {
-
-        String baseURI = "/api/v1/mindmap";
-
-        MvcResult mvcResult = mvc.perform(MockMvcRequestBuilders.get(baseURI + "/test/no_found")
-                .accept(MediaType.APPLICATION_JSON_VALUE)).andReturn();
+        MvcResult mvcResult = mvc.perform(request).andReturn();
 
         int status = mvcResult.getResponse().getStatus();
 
-        MatcherAssert.assertThat(status, Matchers.is(HttpStatus.NOT_FOUND.value()));
+        MatcherAssert.assertThat(status, Matchers.is(201));
+
+        Mockito.verify(mindMapService, Mockito.times(1)).create(Mockito.any());
     }
 
     @Test
-    public void createLeaf() throws Exception {
+    public void deleteMindMap() throws Exception {
 
-        Leaf validLeaf = new Leaf();
-        validLeaf.setPath("test/found");
-        validLeaf.setText("text");
+        MockHttpServletRequestBuilder request = MockMvcRequestBuilders
+                .delete("/api/v1/mindmap")
+                .queryParam("id", "mindmap")
+                .accept(MediaType.APPLICATION_JSON_VALUE);
 
-        ObjectMapper objectMapper = new ObjectMapper();
-
-        String leafJSON = objectMapper.writeValueAsString(validLeaf);
-
-        String baseURI = "/api/v1/mindmap";
-
-        MvcResult mvcResult = mvc.perform(MockMvcRequestBuilders
-                .post(baseURI)
-                .contentType(MediaType.APPLICATION_JSON_VALUE)
-                .content(leafJSON)
-                .accept(MediaType.APPLICATION_JSON_VALUE))
-                .andReturn();
+        MvcResult mvcResult = mvc.perform(request).andReturn();
 
         int status = mvcResult.getResponse().getStatus();
 
-        MatcherAssert.assertThat(status, Matchers.is(HttpStatus.CREATED.value()));
+        MatcherAssert.assertThat(status, Matchers.is(200));
 
-        String content = mvcResult.getResponse().getContentAsString();
-
-        Leaf leaf = objectMapper.readValue(content, Leaf.class);
-
-        MatcherAssert.assertThat(leaf.getPath(), Matchers.is("test/found"));
-        MatcherAssert.assertThat(leaf.getText(), Matchers.is("text"));
-    }
-
-    @Test
-    public void putLeafWithValidPath() throws Exception {
-
-        Leaf validLeaf = new Leaf();
-        validLeaf.setPath("test/found");
-        validLeaf.setText("newtext");
-
-        ObjectMapper objectMapper = new ObjectMapper();
-
-        String leafJSON = objectMapper.writeValueAsString(validLeaf);
-
-        String baseURI = "/api/v1/mindmap";
-
-        MvcResult mvcResult = mvc.perform(MockMvcRequestBuilders
-                .put(baseURI)
-                .contentType(MediaType.APPLICATION_JSON_VALUE)
-                .content(leafJSON)
-                .accept(MediaType.APPLICATION_JSON_VALUE))
-                .andReturn();
-
-        int status = mvcResult.getResponse().getStatus();
-
-        MatcherAssert.assertThat(status, Matchers.is(HttpStatus.OK.value()));
-
-        String content = mvcResult.getResponse().getContentAsString();
-
-        Leaf leaf = objectMapper.readValue(content, Leaf.class);
-
-        MatcherAssert.assertThat(leaf.getPath(), Matchers.is("test/found"));
-        MatcherAssert.assertThat(leaf.getText(), Matchers.is("newtext"));
-    }
-
-    @Test
-    public void putLeafWithInvalidPath() throws Exception {
-
-        Leaf validLeaf = new Leaf();
-        validLeaf.setPath("test/not_found");
-        validLeaf.setText("newtext");
-
-        ObjectMapper objectMapper = new ObjectMapper();
-
-        String leafJSON = objectMapper.writeValueAsString(validLeaf);
-
-        String baseURI = "/api/v1/mindmap";
-
-        MvcResult mvcResult = mvc.perform(MockMvcRequestBuilders
-                .put(baseURI)
-                .contentType(MediaType.APPLICATION_JSON_VALUE)
-                .content(leafJSON)
-                .accept(MediaType.APPLICATION_JSON_VALUE))
-                .andReturn();
-
-        int status = mvcResult.getResponse().getStatus();
-
-        MatcherAssert.assertThat(status, Matchers.is(HttpStatus.NOT_FOUND.value()));
-    }
-
-    @Test
-    public void deleteValidLeaf() throws Exception {
-
-        String baseURI = "/api/v1/mindmap";
-
-        MvcResult mvcResult = mvc.perform(MockMvcRequestBuilders.delete(baseURI + "/test/found")
-                .accept(MediaType.APPLICATION_JSON_VALUE)).andReturn();
-
-        int status = mvcResult.getResponse().getStatus();
-
-        MatcherAssert.assertThat(status, Matchers.is(HttpStatus.NO_CONTENT.value()));
-    }
-
-    @Test
-    public void deleteInvalidLeaf() throws Exception {
-
-        String baseURI = "/api/v1/mindmap";
-
-        MvcResult mvcResult = mvc.perform(MockMvcRequestBuilders.delete(baseURI + "/test/not_found")
-                .accept(MediaType.APPLICATION_JSON_VALUE)).andReturn();
-
-        int status = mvcResult.getResponse().getStatus();
-
-        MatcherAssert.assertThat(status, Matchers.is(HttpStatus.NOT_FOUND.value()));
+        Mockito.verify(mindMapService, Mockito.times(1)).delete("mindmap");
     }
 }
