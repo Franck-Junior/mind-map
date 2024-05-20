@@ -14,7 +14,7 @@ By default, the server is started on port `8080`.
 
 The service is provided with a swagger UI. (`/swagger-ui.html`)
 
-# Specifications
+# Specifications 
 
 * Java 8
 * Spring Boot Application
